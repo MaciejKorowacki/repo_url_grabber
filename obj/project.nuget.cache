@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "IkslqiAxgMk=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Maciej\\source\\repos\\URLgrabberTEST\\URLgrabberTEST.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Maciej\\.nuget\\packages\\microsoft.web.webview2\\1.0.3537.50\\microsoft.web.webview2.1.0.3537.50.nupkg.sha512"
+  ],
+  "logs": []
+}

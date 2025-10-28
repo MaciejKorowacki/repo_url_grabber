@@ -1,0 +1,6 @@
+2025/10/27-18:16:27.130 71d0 Reusing MANIFEST C:\Users\Maciej\source\repos\URLgrabberTEST\bin\Debug\net9.0-windows\URLgrabberTEST.exe.WebView2\EBWebView\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/10/27-18:16:27.130 71d0 Recovering log #15
+2025/10/27-18:16:27.137 71d0 Reusing old log C:\Users\Maciej\source\repos\URLgrabberTEST\bin\Debug\net9.0-windows\URLgrabberTEST.exe.WebView2\EBWebView\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000015.log 
+2025/10/27-18:16:30.670 3700 Level-0 table #20: started
+2025/10/27-18:16:30.679 3700 Level-0 table #20: 1333748 bytes OK
+2025/10/27-18:16:30.680 3700 Delete type=0 #15

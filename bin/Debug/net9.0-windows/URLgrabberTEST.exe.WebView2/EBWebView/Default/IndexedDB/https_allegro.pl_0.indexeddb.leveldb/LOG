@@ -1,0 +1,10 @@
+2025/10/27-18:17:07.218 75d0 Creating DB C:\Users\Maciej\source\repos\URLgrabberTEST\bin\Debug\net9.0-windows\URLgrabberTEST.exe.WebView2\EBWebView\Default\IndexedDB\https_allegro.pl_0.indexeddb.leveldb since it was missing.
+2025/10/27-18:17:07.221 75d0 Reusing MANIFEST C:\Users\Maciej\source\repos\URLgrabberTEST\bin\Debug\net9.0-windows\URLgrabberTEST.exe.WebView2\EBWebView\Default\IndexedDB\https_allegro.pl_0.indexeddb.leveldb/MANIFEST-000001
+2025/10/27-18:17:07.266 29c0 Level-0 table #5: started
+2025/10/27-18:17:07.268 29c0 Level-0 table #5: 651 bytes OK
+2025/10/27-18:17:07.269 29c0 Delete type=0 #3
+2025/10/27-18:17:07.269 29c0 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/10/27-18:17:07.300 71d0 Level-0 table #7: started
+2025/10/27-18:17:07.302 71d0 Level-0 table #7: 647 bytes OK
+2025/10/27-18:17:07.303 71d0 Delete type=0 #4
+2025/10/27-18:17:07.304 71d0 Manual compaction at level-0 from '\x00\x02\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
