@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
+using System.Drawing;
 using Microsoft.Web.WebView2.Core;
 
 namespace URLgrabberTEST
@@ -14,96 +15,86 @@ namespace URLgrabberTEST
         public Form1()
         {
             InitializeComponent();
+            InitializeWebViewAsync();
+            LoadLogo();
+            LoadSavedUrls();
+            LoadAppIcon(); //  load app/form icon
         }
 
-        private async void Form1_Load(object sender, EventArgs e)
+        //  Load icon for the Form and taskbar
+        private void LoadAppIcon()
+        {
+            try
+            {
+                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo_image.ico");
+
+                // Try loading from EXE directory
+                if (File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+                else
+                {
+                    // Fallback to project root if not found
+                    string projectIcon = Path.Combine(
+                        Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory)?.Parent?.Parent?.FullName ?? "",
+                        "logo_image.ico"
+                    );
+                    if (File.Exists(projectIcon))
+                        this.Icon = new Icon(projectIcon);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error loading app icon: " + ex.Message);
+            }
+        }
+
+        private void LoadLogo()
         {
             try
             {
                 string logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo_image.png");
                 if (File.Exists(logoPath))
-                    logoPictureBox.Image = Image.FromFile(logoPath);
+                {
+                    using (var fs = new FileStream(logoPath, FileMode.Open, FileAccess.Read))
+                    {
+                        logoPictureBox.Image = Image.FromStream(fs);
+                    }
+                    logoPictureBox.Visible = true;
+                    logoPictureBox.BringToFront();
+                }
                 else
+                {
                     logoPictureBox.Visible = false;
+                    logoLabel.Visible = false;
+                }
             }
             catch
             {
                 logoPictureBox.Visible = false;
+                logoLabel.Visible = false;
             }
-            // --- AUTOGRAB STATUS LABEL ---
-            autograbStatusLabel.Text = "Autograb status: OFF";
+        }
 
-            // Autograb menu checkbox
-            autograbMenuItem.Checked = autoGrabEnabled;
-            autograbMenuItem.CheckedChanged += (s, ev) =>
+        private void LoadSavedUrls()
+        {
+            urlTreeView.Nodes.Clear();
+            if (File.Exists(urlsFile))
             {
-                autoGrabEnabled = autograbMenuItem.Checked;
-                autograbStatusLabel.Text = $"Autograb status: {(autoGrabEnabled ? "ON" : "OFF")}";
-            };
+                string[] savedLinks = File.ReadAllLines(urlsFile);
+                foreach (var link in savedLinks)
+                    if (!string.IsNullOrWhiteSpace(link))
+                        AddLink(link.Trim());
+            }
+            UpdateStatus();
+        }
 
-            // Hide browser initially
-            webView.Visible = false;
-            splitContainer.Visible = false;
-
-            // Show logo splash
-            logoPictureBox.Visible = true;
-            logoLabel.Visible = true;
-
-            // Menu items
-            loadMenuItem.Click += (s, ev) => LoadUrlsFromFileDialog();
-            saveMenuItem.Click += (s, ev) => SaveUrlsToFileDialog();
-            clearMenuItem.Click += (s, ev) =>
-            {
-                urlTreeView.Nodes.Clear();
-                UpdateStatus();
-                SaveUrlsToFile();
-            };
-            exitMenuItem.Click += (s, ev) => Close();
-
-            // Help menu
-            githubMenuItem.Click += (s, ev) =>
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "https://github.com/MaciejKorowacki/repo_url_grabber",
-                        UseShellExecute = true
-                    });
-                }
-                catch { }
-            };
-            aboutMenuItem.Click += (s, ev) =>
-            {
-                MessageBox.Show("URLGrabber\nVersion 1.0\n© 2025 Maciej Korowacki", "About URLGrabber",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            };
-
-            // Go button & URL textbox
-            goButton.Click += (s, ev) => NavigateToUrl();
-            urlTextBox.KeyDown += UrlTextBox_KeyDown;
-
-            // Back button
-            backButton.Click += (s, ev) => { if (webView.CanGoBack) webView.GoBack(); };
-
-            // Add button
-            addButton.Click += (s, ev) => PromptAddLink();
-
-            // TreeView double click navigation
-            urlTreeView.NodeMouseDoubleClick += (s, ev) =>
-            {
-                if (ev.Node != null && !string.IsNullOrEmpty(ev.Node.Name))
-                    NavigateTo(ev.Node.Name);
-            };
-
-            // TreeView right-click dynamic context menu
-            urlTreeView.MouseUp += UrlTreeView_MouseUp;
-
-            // Initialize WebView2
+        private async void InitializeWebViewAsync()
+        {
             await webView.EnsureCoreWebView2Async(null);
-            webView.CoreWebView2.NavigationStarting += CoreWebView2_NavigationStarting;
+            webView.CoreWebView2.NavigationStarting += (s, e) => urlTextBox.Text = e.Uri;
 
-            // Capture link right-clicks from web pages
             await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
                 document.addEventListener('contextmenu', function(e) {
                     let target = e.target;
@@ -133,19 +124,41 @@ namespace URLgrabberTEST
                     }
                 }
             };
+        }
 
-            // Clear and load previous links
-            urlTreeView.Nodes.Clear();
-            if (File.Exists(urlsFile))
+        // --- EVENT HANDLERS ---
+
+        private void goButton_Click(object sender, EventArgs e)
+        {
+            NavigateToUrl();
+        }
+
+        private void backButton_Click(object sender, EventArgs e)
+        {
+            if (webView.CanGoBack) webView.GoBack();
+        }
+
+        private void addButton_Click(object sender, EventArgs e)
+        {
+            PromptAddLink();
+        }
+
+        private void urlTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
             {
-                string[] savedLinks = File.ReadAllLines(urlsFile);
-                foreach (var link in savedLinks)
-                    if (!string.IsNullOrWhiteSpace(link))
-                        AddLink(link.Trim());
+                e.SuppressKeyPress = true;
+                NavigateToUrl();
             }
         }
 
-        private void UrlTreeView_MouseUp(object sender, MouseEventArgs e)
+        private void urlTreeView_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Node != null && !string.IsNullOrEmpty(e.Node.Name))
+                NavigateTo(e.Node.Name);
+        }
+
+        private void urlTreeView_MouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
             {
@@ -161,10 +174,7 @@ namespace URLgrabberTEST
                         UpdateStatus();
                         SaveUrlsToFile();
                     });
-                    treeContextMenu.Items.Add("Rename this link", null, (s, ev) =>
-                    {
-                        node.BeginEdit();
-                    });
+                    treeContextMenu.Items.Add("Rename this link", null, (s, ev) => node.BeginEdit());
                 }
                 else
                 {
@@ -173,6 +183,50 @@ namespace URLgrabberTEST
 
                 treeContextMenu.Show(urlTreeView, e.Location);
             }
+        }
+
+        private void autograbMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            autoGrabEnabled = autograbMenuItem.Checked;
+            statusLabel.Text = $"Autograb: {(autoGrabEnabled ? "ON" : "OFF")}";
+        }
+
+        private void loadMenuItem_Click(object sender, EventArgs e) => LoadUrlsFromFileDialog();
+        private void saveMenuItem_Click(object sender, EventArgs e) => SaveUrlsToFileDialog();
+        private void clearMenuItem_Click(object sender, EventArgs e)
+        {
+            urlTreeView.Nodes.Clear();
+            UpdateStatus();
+            SaveUrlsToFile();
+        }
+        private void exitMenuItem_Click(object sender, EventArgs e) => Close();
+        private void githubMenuItem_Click(object sender, EventArgs e) =>
+            Process.Start(new ProcessStartInfo { FileName = "https://github.com/MaciejKorowacki/repo_url_grabber", UseShellExecute = true });
+        private void aboutMenuItem_Click(object sender, EventArgs e)
+        {
+            new AboutBox1().ShowDialog();
+        }
+
+        // --- LOGIC ---
+
+        private void NavigateToUrl()
+        {
+            string url = urlTextBox.Text.Trim();
+            if (!string.IsNullOrEmpty(url))
+                NavigateTo(url);
+        }
+
+        private void NavigateTo(string url)
+        {
+            string lowerUrl = url.ToLower();
+            if (!lowerUrl.StartsWith("http://") && !lowerUrl.StartsWith("https://"))
+                url = "https://" + url;
+
+            logoPictureBox.Visible = false;
+            logoLabel.Visible = false;
+            webView.Visible = true;
+            splitContainer.Visible = true;
+            webView.CoreWebView2.Navigate(url);
         }
 
         private void PromptAddLink()
@@ -185,41 +239,6 @@ namespace URLgrabberTEST
             }
         }
 
-        private void CoreWebView2_NavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
-        {
-            urlTextBox.Text = e.Uri;
-        }
-
-        private void UrlTextBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.SuppressKeyPress = true;
-                NavigateToUrl();
-            }
-        }
-
-        private void NavigateToUrl()
-        {
-            string url = urlTextBox.Text.Trim();
-            if (!string.IsNullOrEmpty(url))
-                NavigateTo(url);
-        }
-
-        private void NavigateTo(string url)
-        {
-            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
-                url = "https://" + url;
-
-            // Hide splash
-            logoPictureBox.Visible = false;
-            logoLabel.Visible = false;
-            webView.Visible = true;
-            splitContainer.Visible = true;
-
-            webView.CoreWebView2.Navigate(url);
-        }
-
         private void AddLink(string url)
         {
             if (urlTreeView.Nodes.ContainsKey(url)) return;
@@ -228,33 +247,14 @@ namespace URLgrabberTEST
             UpdateStatus();
         }
 
-        private void UpdateStatus()
-        {
-            statusLabel.Text = $"Links: {urlTreeView.Nodes.Count}";
-        }
-
+        private void UpdateStatus() => statusLabel.Text = $"Links: {urlTreeView.Nodes.Count}";
         private void SaveUrlsToFileDialog()
         {
             using (SaveFileDialog dlg = new SaveFileDialog())
             {
                 dlg.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-                dlg.Title = "Save URLs to file";
                 if (dlg.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        using (var writer = new StreamWriter(dlg.FileName))
-                        {
-                            foreach (TreeNode node in urlTreeView.Nodes)
-                                writer.WriteLine(node.Name);
-                        }
-                        statusLabel.Text = $"Saved {urlTreeView.Nodes.Count} links to {dlg.FileName}";
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error saving file: " + ex.Message);
-                    }
-                }
+                    File.WriteAllLines(dlg.FileName, GetLinks());
             }
         }
 
@@ -263,47 +263,33 @@ namespace URLgrabberTEST
             using (OpenFileDialog dlg = new OpenFileDialog())
             {
                 dlg.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-                dlg.Title = "Load URLs from file";
                 if (dlg.ShowDialog() == DialogResult.OK)
                 {
-                    try
-                    {
-                        urlTreeView.Nodes.Clear();
-                        string[] lines = File.ReadAllLines(dlg.FileName);
-                        foreach (var line in lines)
-                            if (!string.IsNullOrWhiteSpace(line))
-                                AddLink(line.Trim());
-                        UpdateStatus();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error loading file: " + ex.Message);
-                    }
+                    urlTreeView.Nodes.Clear();
+                    string[] lines = File.ReadAllLines(dlg.FileName);
+                    foreach (var line in lines)
+                        if (!string.IsNullOrWhiteSpace(line))
+                            AddLink(line.Trim());
+                    UpdateStatus();
                 }
             }
         }
 
-        private void SaveUrlsToFile()
+        private string[] GetLinks()
         {
-            try
-            {
-                using (var writer = new StreamWriter(urlsFile))
-                {
-                    foreach (TreeNode node in urlTreeView.Nodes)
-                        writer.WriteLine(node.Name);
-                }
-            }
-            catch { }
+            string[] links = new string[urlTreeView.Nodes.Count];
+            for (int i = 0; i < urlTreeView.Nodes.Count; i++)
+                links[i] = urlTreeView.Nodes[i].Name;
+            return links;
         }
+
+        private void SaveUrlsToFile() => File.WriteAllLines(urlsFile, GetLinks());
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             var result = MessageBox.Show("Do you want to save URLs before exit?", "Confirm", MessageBoxButtons.YesNoCancel);
-            if (result == DialogResult.Yes)
-                SaveUrlsToFile();
-            else if (result == DialogResult.Cancel)
-                e.Cancel = true;
-
+            if (result == DialogResult.Yes) SaveUrlsToFile();
+            else if (result == DialogResult.Cancel) e.Cancel = true;
             base.OnFormClosing(e);
         }
     }
