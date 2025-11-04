@@ -1,6 +1,6 @@
 using System.Windows.Forms;
 
-namespace URLgrabberTEST
+namespace UrlGrabber
 {
     public partial class AboutBox1 : Form
     {
